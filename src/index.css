@@ -1,0 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+  
+  /* Fix for sidebar z-index and positioning */
+  .sidebar-wrapper {
+    position: relative;
+    z-index: 40;
+  }
+  
+  .content-wrapper {
+    position: relative;
+    z-index: 20;
+  }
+}
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 0 0% 59.8%;
+
+    /* Extras for subtle depth */
+    --shadow-elev-1: 0 10px 30px -10px hsl(var(--foreground) / 0.15);
+    --shadow-glow: 0 0 40px hsl(var(--ring) / 0.2);
+  }
+
+  .dark {
+    --background: 0 0% 0%; /* Black background for dark mode */
+    --foreground: 0 0% 98%;
+
+    --card: 0 0% 4.9%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 0 0% 4.9%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 11.2%;
+
+    --secondary: 0 0% 17.5%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 0 0% 17.5%;
+    --muted-foreground: 0 0% 65.1%;
+
+    --accent: 0 0% 17.5%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 0 0% 17.5%;
+    --input: 0 0% 17.5%;
+    --ring: 0 0% 83.9%;
+
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 0 0% 95.9%;
+    --sidebar-primary: 0 0% 10%; /* Keeping primary dark for consistency */
+    --sidebar-primary-foreground: 0 0% 98%; /* Light foreground for dark primary */
+    --sidebar-accent: 0 0% 15.9%; /* Darker accent for subtle contrast */
+    --sidebar-accent-foreground: 0 0% 95.9%; /* Light foreground for dark accent */
+    --sidebar-border: 0 0% 15.9%;
+    --sidebar-ring: 0 0% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .hover-scale { @apply transition-transform duration-200 hover:scale-105; }
+  .story-link::after { content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 100%; transform: scaleX(0); transform-origin: bottom right; background: hsl(var(--primary)); transition: transform .3s ease; }
+  .story-link:hover::after { transform: scaleX(1); transform-origin: bottom left; }
+}
