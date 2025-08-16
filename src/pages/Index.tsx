@@ -6,31 +6,88 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useParams, useNavigate } from "react-router-dom";
 
 export default function Index() {
   const [started, setStarted] = useState(false);
-  const [messages, setMessages] = useState<ChatMessageProps[]>([]);
+  const [messages, setMessages] = useState<Array<{role: string, content: string}>>([]);
+  const [allChatSessions, setAllChatSessions] = useState<Array<{ id: number; title: string; date: string; messages: Array<{role: string, content: string}> }>>(() => {
+    const savedSessions = localStorage.getItem('allChatSessions');
+    return savedSessions ? JSON.parse(savedSessions) : [];
+  });
+  const [currentChatSessionId, setCurrentChatSessionId] = useState<number | null>(null);
+
+  const { chatId } = useParams<{ chatId?: string }>();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (chatId) {
+      const id = parseInt(chatId);
+      const session = allChatSessions.find(s => s.id === id);
+      if (session) {
+        setCurrentChatSessionId(id);
+        setMessages(session.messages);
+        setStarted(session.messages.length > 0);
+      } else {
+        // If chat ID in URL doesn't exist, navigate to a new chat
+        handleNewChat();
+      }
+    } else if (allChatSessions.length > 0) {
+      // If no chat ID in URL and there are saved sessions, load the first one
+      setCurrentChatSessionId(allChatSessions[0].id);
+      setMessages(allChatSessions[0].messages);
+      setStarted(allChatSessions[0].messages.length > 0);
+      navigate(`/chat/${allChatSessions[0].id}`);
+    } else {
+      // If no chat ID in URL and no saved sessions, ensure welcome screen is shown
+      setMessages([]);
+      setStarted(false);
+      setCurrentChatSessionId(null);
+    }
+  }, [chatId, allChatSessions.length]); // Only depend on allChatSessions.length to avoid infinite loops
+
+  useEffect(() => {
+    if (messages.length > 0 && currentChatSessionId !== null) {
+      setAllChatSessions(prevSessions =>
+        prevSessions.map(session =>
+          session.id === currentChatSessionId ? { ...session, messages: messages } : session
+        )
+      );
+    } else if (messages.length > 0 && currentChatSessionId === null) {
+      // This handles the case where a user starts typing without explicitly clicking new chat
+      const newSession = {
+        id: Date.now(),
+        title: messages[0].content.substring(0, 30) + (messages[0].content.length > 30 ? "..." : ""), // Use first message as title
+        date: new Date().toLocaleDateString(),
+        messages: messages,
+      };
+      setAllChatSessions(prevSessions => [...prevSessions, newSession]);
+      setCurrentChatSessionId(newSession.id);
+      navigate(`/chat/${newSession.id}`);
+    }
+  }, [messages]);
+
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (started && containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
-    }
-  }, [started, messages]);
-
-  const handleSend = async (value: string) => {
+  const handleSend = async (prompt: string) => {
     if (!started) setStarted(true);
-    setMessages((prev) => [...prev, { role: "user", content: value }]);
+    
+    const newMessages = [...messages, { role: "user", content: prompt }];
+    setMessages(newMessages);
+    
     setLoading(true);
+    await sendToBackend(newMessages);
+  };
 
+  const sendToBackend = async (currentMessages: Array<{role: string, content: string}>) => {
     try {
       const response = await fetch("http://localhost:8000/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt: value }),
+        body: JSON.stringify({ prompt: currentMessages[currentMessages.length - 1].content, history: currentMessages }), // Pass current messages as history
       });
 
       if (!response.ok) {
@@ -38,26 +95,72 @@ export default function Index() {
       }
 
       const data = await response.json();
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: data.response },
-      ]);
+      // Add assistant message to state and save to localStorage
+      setMessages((prev) => {
+        const newMessages = [...prev, { role: "assistant", content: data.response }];
+        return newMessages;
+      });
     } catch (error) {
       console.error("Error sending message to backend:", error);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Error: Could not get a response from the AI." },
-      ]);
+      setMessages((prev) => {
+        const newMessages = [
+          ...prev,
+          { role: "assistant", content: "Error: Could not get a response from the AI." },
+        ];
+        return newMessages;
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleNewChat = () => {
+    setMessages([]);
+    setStarted(false);
+    setCurrentChatSessionId(null);
+    localStorage.removeItem('chatMessages'); // Clear old single chat message history
+  };
+
+  const handleSelectChat = (id: number) => {
+    const session = allChatSessions.find(s => s.id === id);
+    if (session) {
+      setCurrentChatSessionId(id);
+      setMessages(session.messages);
+      setStarted(session.messages.length > 0);
+      navigate(`/chat/${id}`);
+    }
+  };
+
+  const handleDeleteChat = (id: number) => {
+    setAllChatSessions(prevSessions => {
+      const updatedSessions = prevSessions.filter(session => session.id !== id);
+      if (currentChatSessionId === id) {
+        handleNewChat();
+      }
+      return updatedSessions;
+    });
+  };
+
+  useEffect(() => {
+    localStorage.setItem('allChatSessions', JSON.stringify(allChatSessions));
+  }, [allChatSessions]);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   return (
     <SidebarProvider defaultOpen={false}>
       <div className="flex w-full relative">
         <div className="sidebar-wrapper">
-          <AppSidebar />
+          <AppSidebar 
+            onNewChat={handleNewChat} 
+            onSelectChat={handleSelectChat} 
+            onDeleteChat={handleDeleteChat}
+            chatHistory={allChatSessions.map(session => ({ id: session.id, title: session.title, date: session.date }))}
+          />
         </div>
         <SidebarInset className="flex-1 content-wrapper">
           <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">

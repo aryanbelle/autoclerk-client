@@ -1,6 +1,8 @@
 import { cn } from "@/lib/utils";
 import { Bot, User } from "lucide-react";
 import React, { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export type ChatRole = "user" | "assistant";
 
@@ -20,7 +22,13 @@ export function ChatMessage({ role, content }: ChatMessageProps) {
       )}>
         <div className="flex items-start gap-2">
           {isUser ? <User className="h-6 w-6 mt-1 opacity-70" /> : <Bot className="h-6 w-6 mt-1 opacity-70" />} 
-          <TypingEffect content={content} />
+          {isUser ? (
+            <div className="leading-relaxed whitespace-pre-wrap">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+            </div>
+          ) : (
+            <TypingEffect content={content} />
+          )}
         </div>
       </div>
     </article>
@@ -48,5 +56,9 @@ const TypingEffect: React.FC<TypingEffectProps> = ({ content }) => {
     }
   }, [content, index]);
 
-  return <p className="leading-relaxed whitespace-pre-wrap">{displayedContent}</p>;
+  return (
+    <div className="leading-relaxed whitespace-pre-wrap">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayedContent}</ReactMarkdown>
+    </div>
+  );
 };
